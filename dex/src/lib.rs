@@ -27,7 +27,30 @@ use tuxedo_core::{
     support_macros::{CloneNoBound, DebugNoBound, DefaultNoBound},
 };
 
-// TODO Order type
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+/// An order in the order book represents a binding collateralized
+/// offer to make a trade.
+///
+/// The user who opens this order must put up a corresponding amount of
+/// token A. This order can be matched with other orders so long as
+/// the ask amount of token B may be paid to this user.
+///
+/// When a match is made, the payment token will be protected with the
+/// verifier contained in this order.
+pub struct Order<V: Verifier> {
+    /// The amount of token A in this order
+    pub offer_amount: u128,
+    /// The amount of token B in this order
+    pub ask_amount: u128,
+    /// The verifier that will protect the payout coin
+    /// in the event of a successful match.
+    pub payout_verifier: V,
+}
+
+impl<V: Verifier> UtxoData for Order<V> {
+    const TYPE_ID: [u8; 4] = *b"ordr";
+}
 
 
 // TODO Error Type
