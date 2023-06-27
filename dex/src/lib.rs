@@ -53,7 +53,28 @@ impl<V: Verifier> UtxoData for Order<V> {
 }
 
 
-// TODO Error Type
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+/// All the things that can go wrong while checking constraints on dex transactions
+pub enum DexError {
+    /// Some dynamically typed data was not of the expected type
+    TypeError,
+    /// No outputs were supplied when making an order.
+    /// When making an order, exactly one output should be supplied, which is the order.
+    OrderMissing,
+    /// More than one output was supplied.
+    /// When making an order, exactly one output should be supplied, which is the order.
+    TooManyOutputsWhenMakingOrder,
+    /// The coins provided do not have enough combined value to back the order that you attempted to open.
+    NotEnoughCollateralToOpenOrder,
+
+}
+
+impl From<DynamicTypingError> for DexError {
+    fn from(_value: DynamicTypingError) -> Self {
+        Self::TypeError
+    }
+}
 
 
 // TODO MakeOrder SimpleConstraintChecker
