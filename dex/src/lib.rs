@@ -29,6 +29,17 @@ use tuxedo_core::{
     support_macros::{CloneNoBound, DebugNoBound, DefaultNoBound},
 };
 
+/// A Configuration for a Decentralized Exchange.
+pub trait DexConfig {
+    /// The type of verifiers that can be used in dex payouts.
+    /// Typically this should just be the outer verifier type of the runtime.
+    type Verifier: Verifier + PartialEq;
+    /// The first token in the Dex's pair
+    type A: Cash + UtxoData;
+    /// The second token in the Dex's pair
+    type B: Cash + UtxoData;
+}
+
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 /// An order in the order book represents a binding collateralized
@@ -40,18 +51,19 @@ use tuxedo_core::{
 ///
 /// When a match is made, the payment token will be protected with the
 /// verifier contained in this order.
-pub struct Order<V: Verifier> {
+pub struct Order<T: DexConfig> {
     /// The amount of token A in this order
     pub offer_amount: u128,
     /// The amount of token B in this order
     pub ask_amount: u128,
     /// The verifier that will protect the payout coin
     /// in the event of a successful match.
-    pub payout_verifier: V,
+    pub payout_verifier: T::Verifier,
+    pub _ph_data: PhantomData<T>,
 }
 
-impl<V: Verifier> UtxoData for Order<V> {
-    const TYPE_ID: [u8; 4] = *b"ordr";
+impl<T: DexConfig> UtxoData for Order<T> {
+    const TYPE_ID: [u8; 4] = [b'$', b'$', T::A::ID, T::B::ID];
 }
 
 
@@ -87,10 +99,9 @@ impl From<DynamicTypingError> for DexError {
 /// matched outputs. Typically this should be set to the runtime's
 /// outer verifier type. By the end of the tutorial, it will also be
 /// generic over the two coins that will trade in this order book.
-/// But to begin, we will keep it simple.
-pub struct MakeOrder<V: Verifier>(pub PhantomData<V>);
+pub struct MakeOrder<T: DexConfig>(pub PhantomData<T>);
 
-impl<V: Verifier> SimpleConstraintChecker for MakeOrder<V> {
+impl<T: DexConfig> SimpleConstraintChecker for MakeOrder<T> {
     type Error = DexError;
 
     fn check(
@@ -104,13 +115,13 @@ impl<V: Verifier> SimpleConstraintChecker for MakeOrder<V> {
             output_data.len() == 1,
             DexError::TooManyOutputsWhenMakingOrder
         );
-        let order: Order<V> = output_data[0].extract()?;
+        let order: Order<T> = output_data[0].extract()?;
 
         // There may be many inputs and they should all be tokens whose combined value
         // equals or exceeds the amount of token they need to provide for this order
         let mut total_collateral = 0;
         for input in input_data {
-            let coin: money::Coin::<0> = input.extract()?;
+            let coin: T::A = input.extract()?;
             total_collateral += coin.value();
         }
 
