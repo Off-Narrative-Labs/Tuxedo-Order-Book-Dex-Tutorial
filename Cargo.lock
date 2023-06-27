@@ -141,7 +141,7 @@ dependencies = [
 [[package]]
 name = "aggregator"
 version = "0.1.0"
-source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?branch=main#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
+source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?tag=monthly-2023-06#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
 dependencies = [
  "quote",
  "syn 2.0.18",
@@ -1442,7 +1442,7 @@ dependencies = [
 [[package]]
 name = "derive-no-bound"
 version = "0.1.0"
-source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?branch=main#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
+source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?tag=monthly-2023-06#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3673,7 +3673,7 @@ dependencies = [
 [[package]]
 name = "money"
 version = "0.1.0"
-source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?branch=main#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
+source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?tag=monthly-2023-06#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -5006,7 +5006,7 @@ dependencies = [
 [[package]]
 name = "runtime-upgrade"
 version = "0.1.0"
-source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?branch=main#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
+source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?tag=monthly-2023-06#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -7896,7 +7896,7 @@ dependencies = [
 [[package]]
 name = "tuxedo-core"
 version = "1.0.0-dev"
-source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?branch=main#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
+source = "git+https://github.com/Off-Narrative-Labs/Tuxedo?tag=monthly-2023-06#18c2ab36dcd4854baa6bf31aa76cf9f0b24b2acb"
 dependencies = [
  "aggregator",
  "derive-no-bound",
