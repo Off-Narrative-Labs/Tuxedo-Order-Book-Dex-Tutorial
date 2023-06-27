@@ -26,7 +26,7 @@ use tuxedo_core::{
     ensure,
     traits::Cash,
     SimpleConstraintChecker,
-    support_macros::{CloneNoBound, DebugNoBound, DefaultNoBound},
+    support_macros::{CloneNoBound, DebugNoBound, DefaultNoBound}, ConstraintChecker, types::Output,
 };
 
 /// A Configuration for a Decentralized Exchange.
@@ -97,7 +97,17 @@ pub enum DexError {
     TooManyOutputsWhenMakingOrder,
     /// The coins provided do not have enough combined value to back the order that you attempted to open.
     NotEnoughCollateralToOpenOrder,
-
+    /// This transaction has a different number of input orders than output payouts.
+    /// When matching orders, the number of inputs and outputs must be equal.
+    OrderAndPayoutCountDiffer,
+    /// This transaction tries to match an order but provides an incorrect payout.
+    PayoutDoesNotSatisfyOrder,
+    /// The amount of token A supplied by the orders is not enough to match with the demand.
+    InsufficientTokenAForMatch,
+    /// The amount of token B supplied by the orders is not enough to match with the demand.
+    InsufficientTokenBForMatch,
+    /// The verifier who is receiving the tokens is not correct one that was specified in the original order.
+    VerifierMismatchForTrade,
 }
 
 impl From<DynamicTypingError> for DexError {
@@ -148,4 +158,89 @@ impl<T: DexConfig> SimpleConstraintChecker for MakeOrder<T> {
 }
 
 
-// TODO MatchOrder ConstraintChecker
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, PartialEq, Eq, CloneNoBound, DebugNoBound, DefaultNoBound, TypeInfo)]
+/// Constraint checking logic for matching existing open orders against one another
+pub struct MatchOrders<T: DexConfig>(pub PhantomData<T>);
+
+impl<T: DexConfig> ConstraintChecker<T::Verifier> for MatchOrders<T> {
+    type Error = DexError;
+
+    fn check(
+        &self,
+        inputs: &[Output<T::Verifier>],
+        outputs: &[Output<T::Verifier>],
+    ) -> Result<TransactionPriority, Self::Error> {
+        // The input and output slices can be arbitrarily long. We
+        // assume there is a 1:1 correspondence in the sorting such that
+        // the first output is the coin associated with the first order etc.
+        ensure!(inputs.len() == outputs.len(), DexError::OrderAndPayoutCountDiffer);
+
+        // Each order will add some tokens to the matching pot
+        // and demand some tokens from the matching pot.
+        // As we loop through the orders, we will keep track of these totals.
+        // After all orders have been inspected, we will make sure the
+        // amounts add up.
+        let mut total_a_required = 0;
+        let mut total_b_required = 0;
+        let mut a_so_far = 0;
+        let mut b_so_far = 0;
+
+        // As we loop through all the orders, we:
+        // 1. Make sure the output properly fills the order's ask
+        // 2. Update the totals for checking at the end
+        for (input, output) in inputs.iter().zip(outputs) {
+            // It could be Order<V, A, B> or Order<V, B, A> so we will try both.
+            if let Ok(order) = input.payload.extract::<Order<T>>() {
+                a_so_far += order.offer_amount;
+                total_b_required += order.ask_amount;
+
+                // Ensure the payout is the right amount
+                let payout = output.payload.extract::<T::B>()?;
+                ensure!(
+                    payout.value() == order.ask_amount,
+                    DexError::PayoutDoesNotSatisfyOrder
+                );
+
+                // ensure that the payout was given to the right owner
+                ensure!(
+                    output.verifier == order.payout_verifier,
+                    DexError::VerifierMismatchForTrade
+                )
+            } else if let Ok(order) = input.payload.extract::<Order<OppositeSide<T>>>() {
+                b_so_far += order.offer_amount;
+                total_a_required += order.ask_amount;
+
+                // Ensure the payout is the right amount
+                let payout = output.payload.extract::<T::A>()?;
+                ensure!(
+                    payout.value() == order.ask_amount,
+                    DexError::PayoutDoesNotSatisfyOrder
+                );
+
+                // ensure that the payout was given to the right owner
+                ensure!(
+                    output.verifier == order.payout_verifier,
+                    DexError::VerifierMismatchForTrade
+                )
+
+            } else {
+                // If the order doesn't decode to either side of this pair, then it is not the
+                // right type and we return the general type error.
+                Err(DexError::TypeError)?
+            };
+        }
+
+        // Make sure the amounts in the orders actually match and satisfy each other.
+        ensure!(
+            a_so_far >= total_a_required,
+            DexError::InsufficientTokenAForMatch
+        );
+        ensure!(
+            b_so_far >= total_b_required,
+            DexError::InsufficientTokenBForMatch
+        );
+
+        Ok(0)
+    }
+}

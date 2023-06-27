@@ -227,8 +227,8 @@ pub enum OuterConstraintChecker {
     /// This is represents taking the opposite side of the trade compared
     /// to the previous entry.
     MakeOrder10(dex::MakeOrder<OppositeSide<DexConfig01>>),
-
-    // TODO add a sixth variant here to represent matching dex orders together.
+    /// Match dex orders between Coin 0 and Coin 1
+    MatchOrders(dex::MatchOrders<DexConfig01>),
 }
 
 /// The main struct in this module.
