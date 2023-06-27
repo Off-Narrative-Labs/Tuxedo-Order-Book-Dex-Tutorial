@@ -22,6 +22,7 @@ use sp_runtime::{
     ApplyExtrinsicResult, BoundToRuntimeAppPublic,
 };
 use sp_std::prelude::*;
+use dex::OppositeSide;
 
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
@@ -198,7 +199,14 @@ pub enum OuterVerifier {
     ThresholdMultiSignature(ThresholdMultiSignature),
 }
 
-// TODO Declare a configuration for our dex here.
+#[derive(PartialEq, Eq, TypeInfo)]
+/// A Dex Configuration for the Dex that trades tokens 0 and 1
+pub struct DexConfig01;
+impl dex::DexConfig for DexConfig01 {
+    type Verifier = OuterVerifier;
+    type A = money::Coin<0>;
+    type B = money::Coin<1>;
+}
 
 /// A constraint checker is a piece of logic that can be used to check a transaction.
 /// For any given Tuxedo runtime there is a finite set of such constraint checkers.
@@ -213,8 +221,12 @@ pub enum OuterConstraintChecker {
     RuntimeUpgrade(runtime_upgrade::RuntimeUpgrade),
     /// Monetary transaction in a second fungible currency
     SecondToken(money::MoneyConstraintChecker<1>),
-
-    // TODO add a fourth and fifth variant here to represent making a dex orders.
+    /// Open dex orders to trade Coin 0 for Coin 1
+    MakeOrder01(dex::MakeOrder<DexConfig01>),
+    /// Open dex orders to trade Coin 1 for Coin 0
+    /// This is represents taking the opposite side of the trade compared
+    /// to the previous entry.
+    MakeOrder10(dex::MakeOrder<OppositeSide<DexConfig01>>),
 
     // TODO add a sixth variant here to represent matching dex orders together.
 }

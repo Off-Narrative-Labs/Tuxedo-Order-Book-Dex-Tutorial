@@ -40,6 +40,22 @@ pub trait DexConfig {
     type B: Cash + UtxoData;
 }
 
+#[derive(PartialEq, Eq, TypeInfo)]
+/// This type represents a configuration that has the tokens swapped from
+/// some original configuration.
+///
+/// When opening orders, we want to allow orders for both sides of the trade.
+/// Similarly, when matching orders we have to be sure that the matched orders are on
+/// opposite sides of the same trading pair. This type allows us to conveniently
+/// express "same pair, but opposite side".
+pub struct OppositeSide<T: DexConfig>(PhantomData<T>);
+
+impl<T: DexConfig> DexConfig for OppositeSide<T> {
+    type Verifier = T::Verifier;
+    type A = T::B;
+    type B = T::A;
+}
+
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 /// An order in the order book represents a binding collateralized
