@@ -12,6 +12,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use core::marker::PhantomData;
+
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
@@ -77,7 +79,46 @@ impl From<DynamicTypingError> for DexError {
 }
 
 
-// TODO MakeOrder SimpleConstraintChecker
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, PartialEq, Eq, CloneNoBound, DefaultNoBound, DebugNoBound, TypeInfo)]
+/// The Constraint checking logic for opening a new order.
+///
+/// It is generic over the verifier type which can be used to protect
+/// matched outputs. Typically this should be set to the runtime's
+/// outer verifier type. By the end of the tutorial, it will also be
+/// generic over the two coins that will trade in this order book.
+/// But to begin, we will keep it simple.
+pub struct MakeOrder<V: Verifier>(pub PhantomData<V>);
+
+impl<V: Verifier> SimpleConstraintChecker for MakeOrder<V> {
+    type Error = DexError;
+
+    fn check(
+        &self,
+        input_data: &[DynamicallyTypedData],
+        output_data: &[DynamicallyTypedData],
+    ) -> Result<TransactionPriority, Self::Error> {
+        // There should be a single order as the output
+        ensure!(!output_data.is_empty(), DexError::OrderMissing);
+        ensure!(
+            output_data.len() == 1,
+            DexError::TooManyOutputsWhenMakingOrder
+        );
+        let order: Order<V> = output_data[0].extract()?;
+
+        // There may be many inputs and they should all be tokens whose combined value
+        // equals or exceeds the amount of token they need to provide for this order
+        let mut total_collateral = 0;
+        for input in input_data {
+            let coin: money::Coin::<0> = input.extract()?;
+            total_collateral += coin.value();
+        }
+
+        ensure!(total_collateral == order.offer_amount, DexError::NotEnoughCollateralToOpenOrder);
+
+        Ok(0)
+    }
+}
 
 
 // TODO MatchOrder ConstraintChecker
