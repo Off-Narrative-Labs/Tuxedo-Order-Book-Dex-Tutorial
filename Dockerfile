@@ -14,7 +14,7 @@ RUN cargo build --locked --release
 # Alpine does't work as explained https://stackoverflow.com/a/66974607/4184410
 # Also, surprisingly, `ubuntu:latest` doesn't work and leads to "OS can't spawn worker thread: Operation not permitted"
 FROM docker.io/library/ubuntu:20.04
-LABEL description="Tuxedo Node Template"
+LABEL description="Tuxedo Order Book Dex Tutorial"
 
 COPY --from=builder /node-template/target/release/node-template /usr/local/bin
 
